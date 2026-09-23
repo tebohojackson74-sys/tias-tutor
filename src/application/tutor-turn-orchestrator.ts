@@ -1,5 +1,6 @@
 import type { AIGateway } from "./ai-gateway.js";
-import type { TutorContext, TutorContextBuilder } from "./tutor-context-builder.js";
+import type { TutorContextBuilder } from "./tutor-context-builder.js";
+import type { TutorContext } from "./tutor-context.js";
 import type { RetrievalManager } from "./retrieval-manager.js";
 import { RuleBasedIntentDetector } from "./intent-detector.js";
 import { StrategyEngine } from "./strategy-engine.js";
@@ -83,7 +84,9 @@ export class TutorTurnOrchestrator {
     });
 
     if (!validated.response) {
-      throw new Error(`Tutor response failed validation: ${validated.reasons.join("; ")}`);
+      throw new Error(
+        `Tutor response failed validation: ${validated.reasons.join("; ")}`,
+      );
     }
 
     return {

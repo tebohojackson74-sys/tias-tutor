@@ -25,23 +25,24 @@ interface GeminiInteractionResponse {
 export class GeminiInteractionsAdapter implements AIGateway {
   private readonly apiKey: string;
   private readonly model: string;
-  private readonly baseUrl = "https://generativelanguage.googleapis.com/v1beta/interactions";
+  private readonly baseUrl =
+    "https://generativelanguage.googleapis.com/v1beta/interactions";
 
   constructor(config?: { apiKey?: string; model?: string }) {
     this.apiKey = config?.apiKey ?? process.env.GEMINI_API_KEY ?? "";
     this.model =
       config?.model ??
       process.env.GEMINI_MODEL ??
-      "gemini-3.8-flash";
-
-    if (!this.apiKey) {
-      throw new AIConfigurationError("GEMINI_API_KEY is not configured.");
-    }
+      "gemini-2.5-flash";
   }
 
   async generateTutorResponse(
     request: TutorGenerationRequest,
   ): Promise<TutorModelResponse> {
+    if (!this.apiKey) {
+      throw new AIConfigurationError("GEMINI_API_KEY is not configured.");
+    }
+
     const prompt = this.buildPrompt(request);
 
     const response = await fetch(this.baseUrl, {

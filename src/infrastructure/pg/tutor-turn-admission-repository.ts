@@ -1,8 +1,14 @@
-import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
+import { randomUUID } from "node:crypto";
 import { withTransaction } from "./transaction.js";
-import type { AdmittedTutorTurn, AdmitTutorTurnInput } from "../../application/tutor-turn-admission.js";
-import { ActiveTutorTurnError, TutorSessionClosedError } from "../../application/tutor-turn-admission.js";
+import type {
+  AdmittedTutorTurn,
+  AdmitTutorTurnInput,
+} from "../../application/tutor-turn-admission.js";
+import {
+  ActiveTutorTurnError,
+  TutorSessionClosedError,
+} from "../../application/tutor-turn-admission.js";
 import type { TutorTurn } from "../../domain/tutor.js";
 
 interface TurnRow {
@@ -108,22 +114,29 @@ export class PgTutorTurnAdmissionRepository {
         throw new ActiveTutorTurnError();
       }
 
+      const executionToken = randomUUID();
+
       const turnInsert = await client.query<TurnRow>(
         `INSERT INTO tutor_turns (
            session_id,
            client_turn_id,
            base_state_version,
            processing_status,
-           execution_token
+           execution_token,
+           lease_expires_at,
+           heartbeat_at
          )
-         VALUES ($1, $2, $3, 'received', $4)
+         VALUES (
+           $1, $2, $3, 'received', $4,
+           NOW() + INTERVAL '90 seconds', NOW()
+         )
          RETURNING id, session_id, client_turn_id, base_state_version,
                    processing_status, execution_token`,
         [
           input.sessionId,
           input.clientTurnId,
           session.state_version,
-          randomUUID(),
+          executionToken,
         ],
       );
 
