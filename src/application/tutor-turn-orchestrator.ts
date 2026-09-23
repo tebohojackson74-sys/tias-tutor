@@ -1,5 +1,5 @@
 import type { AIGateway } from "./ai-gateway.js";
-import type { TutorContextBuilder } from "./tutor-context-builder.js";
+import type { TutorContext, TutorContextBuilder } from "./tutor-context-builder.js";
 import type { RetrievalManager } from "./retrieval-manager.js";
 import { RuleBasedIntentDetector } from "./intent-detector.js";
 import { StrategyEngine } from "./strategy-engine.js";
@@ -20,6 +20,7 @@ export interface TutorTurnProcessingResult {
   response: TutorModelResponse;
   intent: ReturnType<RuleBasedIntentDetector["detect"]>;
   teachingMove: ReturnType<StrategyEngine["choose"]>;
+  context: TutorContext;
 }
 
 export class TutorTurnOrchestrator {
@@ -89,6 +90,7 @@ export class TutorTurnOrchestrator {
       response: validated.response,
       intent,
       teachingMove: strategy,
+      context: { ...context, evidence, intent: intent.intent },
     };
   }
 }

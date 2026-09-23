@@ -1,4 +1,8 @@
-import type { TutorContext, BuildTutorContextInput, TutorContextSources } from "./tutor-context.js";
+import type {
+  TutorContext,
+  BuildTutorContextInput,
+  TutorContextSources,
+} from "./tutor-context.js";
 
 export class TutorContextBuilder {
   constructor(private readonly sources: TutorContextSources) {}
@@ -17,14 +21,6 @@ export class TutorContextBuilder {
     const summary = await this.sources.getConversationSummary(
       input.sessionId,
     );
-    const evidence = await this.sources.getEvidence({
-      learnerId: input.learnerId,
-      subjectId: session.subjectId,
-      topicId: session.topicId,
-      skillId: session.skillId,
-      query: input.learnerMessage,
-      groundingMode: input.groundingMode,
-    });
 
     return {
       learner,
@@ -40,7 +36,7 @@ export class TutorContextBuilder {
         recentMessages,
         summary,
       },
-      evidence,
+      evidence: [],
       constraints: {
         groundingMode: input.groundingMode,
         requireLearnerInteraction: session.teachingPhase !== "mastery",
