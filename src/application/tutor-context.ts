@@ -17,6 +17,12 @@ export interface MasterySnapshot {
   confidenceScore: number;
   independenceScore: number;
   retentionScore: number;
+  evidenceMass: number;
+  independentSuccessCount: number;
+  transferSuccessCount: number;
+  retrievalSuccessCount: number;
+  attemptCount: number;
+  correctCount: number;
   currentState:
     | "unknown"
     | "emerging"
@@ -75,9 +81,15 @@ export interface TutorContext {
 
 export interface TutorContextSources {
   getLearnerProfile(learnerId: string): Promise<LearnerTutorProfile>;
-  getLearningContext(learnerId: string, skillId: string | null): Promise<TutorLearningContext>;
+  getLearningContext(
+    learnerId: string,
+    skillId: string | null,
+  ): Promise<TutorLearningContext>;
   getSessionState(sessionId: string): Promise<TutorSessionState>;
-  getRecentMessages(sessionId: string, limit: number): Promise<ConversationContext["recentMessages"]>;
+  getRecentMessages(
+    sessionId: string,
+    limit: number,
+  ): Promise<ConversationContext["recentMessages"]>;
   getConversationSummary(sessionId: string): Promise<string>;
   getEvidence(request: {
     learnerId: string;
