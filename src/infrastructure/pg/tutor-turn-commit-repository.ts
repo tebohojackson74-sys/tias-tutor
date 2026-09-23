@@ -132,6 +132,13 @@ export class PgTutorTurnCommitRepository implements TutorTurnCommitRepository {
         );
       }
 
+      await client.query(
+        `UPDATE pending_interactions
+         SET status = 'answered', answered_at = NOW()
+         WHERE session_id = $1 AND status = 'waiting'`,
+        [input.sessionId],
+      );
+
       let pendingInteractionId: string | null = null;
 
       if (
@@ -141,15 +148,18 @@ export class PgTutorTurnCommitRepository implements TutorTurnCommitRepository {
         const interaction = await client.query<{ id: string }>(
           `INSERT INTO pending_interactions (
              session_id, turn_id, interaction_type,
-             question, skill_id, difficulty
+             question, expected_evidence, skill_id, difficulty
            )
-           VALUES ($1, $2, $3, $4, $5, $6)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
            RETURNING id`,
           [
             input.sessionId,
             input.turnId,
             input.response.interaction.type,
             input.response.interaction.question,
+            JSON.stringify(
+              input.response.interaction.expectedEvidence ?? {},
+            ),
             input.response.interaction.skillId ?? null,
             input.response.interaction.difficulty,
           ],

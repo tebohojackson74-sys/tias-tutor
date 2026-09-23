@@ -46,6 +46,20 @@ export type InteractionType =
   | "quiz"
   | "reflection";
 
+export interface PendingInteraction {
+  id: string;
+  sessionId: string;
+  turnId: string;
+  interactionType: InteractionType;
+  question: string;
+  expectedEvidence: unknown;
+  skillId: string | null;
+  difficulty: "support" | "standard" | "challenge";
+  attemptNumber: number;
+  hintsUsed: number;
+  maxHints: number;
+}
+
 export interface TutorSessionState {
   sessionId: string;
   learnerId: string;
@@ -121,6 +135,7 @@ export interface TutorModelResponse {
   interaction?: {
     type: InteractionType;
     question: string;
+    expectedEvidence?: unknown;
     skillId?: string;
     difficulty: "support" | "standard" | "challenge";
   };

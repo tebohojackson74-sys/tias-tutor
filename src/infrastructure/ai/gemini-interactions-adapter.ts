@@ -3,11 +3,15 @@ import {
   AIProviderError,
 } from "../../application/ai-gateway.js";
 import type { AIGateway } from "../../application/ai-gateway.js";
+import type { AnswerEvaluation } from "../../domain/assessment.js";
 import type {
   TutorGenerationRequest,
   TutorModelResponse,
 } from "../../domain/tutor.js";
-import { tutorModelResponseSchema } from "../../api/schemas.js";
+import {
+  answerEvaluationSchema,
+  tutorModelResponseSchema,
+} from "../../api/schemas.js";
 
 interface GeminiInteractionResponse {
   id?: string;
@@ -39,11 +43,67 @@ export class GeminiInteractionsAdapter implements AIGateway {
   async generateTutorResponse(
     request: TutorGenerationRequest,
   ): Promise<TutorModelResponse> {
+    const rawText = await this.callGemini(
+      this.tutorSystemInstruction(),
+      this.buildTutorPrompt(request),
+    );
+    return tutorModelResponseSchema.parse(this.parseJson(rawText));
+  }
+
+  async evaluateAnswer(request: {
+    question: string;
+    learnerAnswer: string;
+    expectedEvidence: unknown;
+    skillId: string | null;
+    gradeLevel: string;
+    language: string;
+  }): Promise<AnswerEvaluation> {
+    const rawText = await this.callGemini(
+      this.evaluatorSystemInstruction(),
+      JSON.stringify({
+        task: "Evaluate the learner answer as evidence about a skill.",
+        question: request.question,
+        learnerAnswer: request.learnerAnswer,
+        expectedEvidence: request.expectedEvidence,
+        skillId: request.skillId,
+        gradeLevel: request.gradeLevel,
+        language: request.language,
+        outputShape: {
+          outcome: "correct | partially_correct | incorrect | unclear",
+          confidence: "number 0..1",
+          errorClassification: "optional enum",
+          feedbackRecommendation:
+            "affirm | correct | clarify | remediate | retry",
+          skillEvidence: [
+            {
+              skillId: "UUID",
+              evidenceWeight: "0..2",
+              confidence: "0..1",
+            },
+          ],
+          misconceptionSignals: [
+            {
+              patternCode: "string",
+              description: "string",
+              severity: "0..1",
+              confidence: "0..1",
+            },
+          ],
+          reasoningEvidence: ["optional string"],
+        },
+      }),
+    );
+
+    return answerEvaluationSchema.parse(this.parseJson(rawText));
+  }
+
+  private async callGemini(
+    systemInstruction: string,
+    input: string,
+  ): Promise<string> {
     if (!this.apiKey) {
       throw new AIConfigurationError("GEMINI_API_KEY is not configured.");
     }
-
-    const prompt = this.buildPrompt(request);
 
     const response = await fetch(this.baseUrl, {
       method: "POST",
@@ -53,8 +113,8 @@ export class GeminiInteractionsAdapter implements AIGateway {
       },
       body: JSON.stringify({
         model: this.model,
-        input: prompt,
-        system_instruction: this.systemInstruction(),
+        input,
+        system_instruction: systemInstruction,
         store: false,
       }),
     });
@@ -68,22 +128,21 @@ export class GeminiInteractionsAdapter implements AIGateway {
 
     const payload = (await response.json()) as GeminiInteractionResponse;
     const rawText = this.extractText(payload);
-
     if (!rawText) {
       throw new AIProviderError("Gemini returned no text output.");
     }
+    return rawText;
+  }
 
-    let parsed: unknown;
+  private parseJson(rawText: string): unknown {
     try {
-      parsed = JSON.parse(rawText);
+      return JSON.parse(rawText);
     } catch {
       throw new AIProviderError("Gemini output was not valid JSON.");
     }
-
-    return tutorModelResponseSchema.parse(parsed);
   }
 
-  private systemInstruction(): string {
+  private tutorSystemInstruction(): string {
     return [
       "You are the Tias Tutor teaching engine.",
       "You teach, do not merely answer.",
@@ -93,10 +152,21 @@ export class GeminiInteractionsAdapter implements AIGateway {
       "Return only JSON matching the requested tutor response shape.",
       "When useful, ask the learner a follow-up question.",
       "Respect the specified grounding mode.",
+      "When asking a question, include expectedEvidence describing what a correct learner response should demonstrate.",
     ].join("\n");
   }
 
-  private buildPrompt(request: TutorGenerationRequest): string {
+  private evaluatorSystemInstruction(): string {
+    return [
+      "You are the Tias Tutor answer evaluator.",
+      "Evaluate evidence, not the learner as a person.",
+      "Do not infer permanent traits from a single answer.",
+      "Distinguish conceptual errors from procedural or careless errors when evidence supports it.",
+      "Return only JSON matching the requested evaluation shape.",
+    ].join("\n");
+  }
+
+  private buildTutorPrompt(request: TutorGenerationRequest): string {
     const evidence = request.evidence.map((item) => ({
       evidenceId: item.evidenceId,
       authority: item.authority,
@@ -122,6 +192,7 @@ export class GeminiInteractionsAdapter implements AIGateway {
         interaction: {
           type: "optional interaction type",
           question: "string",
+          expectedEvidence: "optional structured evidence",
           skillId: "optional UUID",
           difficulty: "support | standard | challenge",
         },
