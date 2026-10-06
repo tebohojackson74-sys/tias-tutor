@@ -135,8 +135,8 @@ export interface TutorModelResponse {
   interaction?: {
     type: InteractionType;
     question: string;
-    expectedEvidence?: unknown;
-    skillId?: string;
+    expectedEvidence?: unknown | undefined;
+    skillId?: string | undefined;
     difficulty: "support" | "standard" | "challenge";
   };
 }
