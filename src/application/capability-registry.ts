@@ -29,11 +29,12 @@ export class CapabilityRegistry {
       item.canHandle(context),
     );
 
-    if (candidates.length === 0) {
-      return this.get("chat");
+    const candidate = candidates[0];
+    if (candidate) {
+      return candidate;
     }
 
-    return candidates[0];
+    return this.get("chat");
   }
 
   async execute(request: CapabilityRequest): Promise<CapabilityResult> {
