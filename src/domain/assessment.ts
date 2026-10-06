@@ -16,7 +16,7 @@ export type ErrorClassification =
 export interface AnswerEvaluation {
   outcome: AnswerOutcome;
   confidence: number;
-  errorClassification?: ErrorClassification;
+  errorClassification?: ErrorClassification | undefined;
   feedbackRecommendation:
     | "affirm"
     | "correct"
@@ -34,5 +34,5 @@ export interface AnswerEvaluation {
     severity: number;
     confidence: number;
   }>;
-  reasoningEvidence?: string[];
+  reasoningEvidence?: string[] | undefined;
 }
