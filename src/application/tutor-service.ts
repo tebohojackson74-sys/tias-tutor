@@ -180,7 +180,7 @@ export class TutorService {
 
     const session = processed.context.session;
 
-    const committed = await this.commit.commit({
+    const commitInput = {
       turnId: admitted.turn.id,
       sessionId: input.sessionId,
       executionToken: admitted.turn.executionToken,
@@ -212,8 +212,10 @@ export class TutorService {
         promptVersion: "tutor-v1",
         status: "success",
       },
-      learning,
-    });
+      ...(learning ? { learning } : {}),
+    };
+
+    const committed = await this.commit.commit(commitInput);
 
     return {
       turnId: admitted.turn.id,
