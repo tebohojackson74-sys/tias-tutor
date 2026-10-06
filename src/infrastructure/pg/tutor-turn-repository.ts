@@ -51,7 +51,7 @@ export class PgTutorTurnRepository implements TutorTurnRepository {
        LIMIT 1`,
       [sessionId],
     );
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async create(input: {
