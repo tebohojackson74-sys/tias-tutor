@@ -17,10 +17,8 @@ export interface CapabilityRequest extends CapabilityContext {
   prepared: PreparedTutorTurn;
 }
 
-export interface CapabilityResult {
+export interface CapabilityResult extends TutorTurnProcessingResult {
   capabilityId: TutorCapabilityId;
-  response: TutorModelResponse;
-  processing: TutorTurnProcessingResult;
 }
 
 export interface TutorCapability {
