@@ -104,7 +104,7 @@ export interface RetrievedEvidence {
     | "external"
     | "generated";
   relevanceScore: number;
-  pageNumber?: number;
+  pageNumber?: number | undefined;
 }
 
 export interface TutorGenerationRequest {
@@ -131,7 +131,7 @@ export interface TutorModelResponse {
     | "question"
     | "hint"
     | "quiz";
-  citations: Array<{ evidenceId: string; claim?: string }>;
+  citations: Array<{ evidenceId: string; claim?: string | undefined }>;
   interaction?: {
     type: InteractionType;
     question: string;
