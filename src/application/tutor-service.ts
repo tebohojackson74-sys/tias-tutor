@@ -2,7 +2,7 @@ import { sendTutorMessageSchema } from "../api/schemas.js";
 import type { EvidenceType } from "../domain/learning.js";
 import { LearningEngine } from "./learning-engine.js";
 import type { TutorTurnCommitRepository } from "./tutor-turn-commit.js";
-import type { TutorTurnOrchestrator } from "./tutor-turn-orchestrator.js";
+import type { TutorCapabilityRuntime } from "./tutor-capability-runtime.js";
 import type { PendingInteractionService } from "./pending-interaction-service.js";
 
 function mapEvidenceType(interactionType: string): EvidenceType {
@@ -45,7 +45,7 @@ export class TutorService {
         learnerMessageId: string;
       }>;
     },
-    private readonly orchestrator: TutorTurnOrchestrator,
+    private readonly capabilities: TutorCapabilityRuntime,
     private readonly pendingInteractions: PendingInteractionService,
     private readonly learning: LearningEngine,
     private readonly commit: TutorTurnCommitRepository,
@@ -66,7 +66,7 @@ export class TutorService {
       content: body.content,
     });
 
-    const processed = await this.orchestrator.process({
+    const processed = await this.capabilities.execute({
       learnerId: input.learnerId,
       sessionId: input.sessionId,
       learnerMessage: body.content,
