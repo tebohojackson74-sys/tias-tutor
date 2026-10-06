@@ -138,5 +138,5 @@ export interface TutorModelResponse {
     expectedEvidence?: unknown | undefined;
     skillId?: string | undefined;
     difficulty: "support" | "standard" | "challenge";
-  };
+  } | undefined;
 }
