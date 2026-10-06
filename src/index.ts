@@ -11,6 +11,7 @@ import { GeminiInteractionsAdapter } from "./infrastructure/ai/gemini-interactio
 import { PgTutorTurnCommitRepository } from "./infrastructure/pg/tutor-turn-commit-repository.js";
 import { TutorService } from "./application/tutor-service.js";
 import { TutorTurnOrchestrator } from "./application/tutor-turn-orchestrator.js";
+import { TutorCapabilityRuntime } from "./application/tutor-capability-runtime.js";
 import { PendingInteractionService } from "./application/pending-interaction-service.js";
 import { LearningEngine } from "./application/learning-engine.js";
 import { handleTutorMessageRoute } from "./api/tutor-route.js";
@@ -34,9 +35,10 @@ const orchestrator = new TutorTurnOrchestrator(
   retrieval,
   ai,
 );
+const capabilityRuntime = TutorCapabilityRuntime.create(orchestrator);
 const tutorService = new TutorService(
   admission,
-  orchestrator,
+  capabilityRuntime,
   pendingInteractions,
   learning,
   commit,
