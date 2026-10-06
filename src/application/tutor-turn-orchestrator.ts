@@ -11,17 +11,17 @@ export interface TutorTurnProcessingInput {
   learnerId: string;
   sessionId: string;
   learnerMessage: string;
-  groundingMode:
-    | "source_only"
-    | "curriculum_plus_sources"
-    | "general_plus_sources";
+  groundingMode: "source_only"|"curriculum_plus_sources"|"general_plus_sources";
 }
 
-export interface TutorTurnProcessingResult {
-  response: TutorModelResponse;
+export interface PreparedTutorTurn {
+  context: TutorContext;
   intent: ReturnType<RuleBasedIntentDetector["detect"]>;
   teachingMove: ReturnType<StrategyEngine["choose"]>;
-  context: TutorContext;
+}
+
+export interface TutorTurnProcessingResult extends PreparedTutorTurn {
+  response: TutorModelResponse;
 }
 
 export class TutorTurnOrchestrator {
@@ -35,21 +35,14 @@ export class TutorTurnOrchestrator {
     private readonly ai: AIGateway,
   ) {}
 
-  async process(
-    input: TutorTurnProcessingInput,
-  ): Promise<TutorTurnProcessingResult> {
+  async prepare(input: TutorTurnProcessingInput): Promise<PreparedTutorTurn> {
     const context = await this.contextBuilder.build({
       learnerId: input.learnerId,
       sessionId: input.sessionId,
       learnerMessage: input.learnerMessage,
       groundingMode: input.groundingMode,
     });
-
-    const intent = this.intentDetector.detect({
-      message: input.learnerMessage,
-      context,
-    });
-
+    const intent = this.intentDetector.detect({ message: input.learnerMessage, context });
     const evidence = await this.retrieval.retrieve({
       learnerId: input.learnerId,
       subjectId: context.session.subjectId,
@@ -58,42 +51,33 @@ export class TutorTurnOrchestrator {
       query: input.learnerMessage,
       groundingMode: input.groundingMode,
     });
+    const strategy = this.strategyEngine.choose({ context: { ...context, evidence }, intent: intent.intent });
+    return { context: { ...context, evidence, intent: intent.intent }, intent, teachingMove: strategy };
+  }
 
-    const strategy = this.strategyEngine.choose({
-      context: { ...context, evidence },
-      intent: intent.intent,
-    });
-
+  async complete(input: TutorTurnProcessingInput, prepared: PreparedTutorTurn): Promise<TutorTurnProcessingResult> {
     const response = await this.ai.generateTutorResponse({
       learnerMessage: input.learnerMessage,
-      intent: intent.intent,
-      objective: context.objective.objective,
-      teachingMove: strategy.move,
-      teachingPhase: strategy.phase,
-      language: context.learner.language,
-      gradeLevel: context.learner.gradeLevel,
+      intent: prepared.intent.intent,
+      objective: prepared.context.objective.objective,
+      teachingMove: prepared.teachingMove.move,
+      teachingPhase: prepared.teachingMove.phase,
+      language: prepared.context.learner.language,
+      gradeLevel: prepared.context.learner.gradeLevel,
       groundingMode: input.groundingMode,
-      evidence,
+      evidence: prepared.context.evidence,
     });
-
     const validated = this.responseValidator.validate({
       response,
-      evidence,
+      evidence: prepared.context.evidence,
       groundingMode: input.groundingMode,
-      requireLearnerInteraction: strategy.askLearner,
+      requireLearnerInteraction: prepared.teachingMove.askLearner,
     });
+    if (!validated.response) throw new Error(`Tutor response failed validation: ${validated.reasons.join("; ")}`);
+    return { ...prepared, response: validated.response };
+  }
 
-    if (!validated.response) {
-      throw new Error(
-        `Tutor response failed validation: ${validated.reasons.join("; ")}`,
-      );
-    }
-
-    return {
-      response: validated.response,
-      intent,
-      teachingMove: strategy,
-      context: { ...context, evidence, intent: intent.intent },
-    };
+  async process(input: TutorTurnProcessingInput): Promise<TutorTurnProcessingResult> {
+    return this.complete(input, await this.prepare(input));
   }
 }
