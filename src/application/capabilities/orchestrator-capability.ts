@@ -17,6 +17,6 @@ export class OrchestratorBackedCapability implements TutorCapability {
       learnerMessage: request.learnerMessage,
       groundingMode: request.groundingMode,
     }, request.prepared);
-    return { capabilityId: this.id, response: processing.response, processing };
+    return { ...processing, capabilityId: this.id };
   }
 }
